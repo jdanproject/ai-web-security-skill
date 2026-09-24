@@ -23,10 +23,9 @@ CHANGELOG.md, VERSION        historia zmian i bieżąca wersja
 W katalogu głównym projektu:
 
 ```bash
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/jdanproject/ai-web-security-skill/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jdanproject/ai-web-security-skill/main/scripts/install.sh | bash
 # lub ręcznie:
-git submodule add git@github.com:jdanproject/ai-web-security-skill.git .cursor/skills/ai-web-security
+git submodule add https://github.com/jdanproject/ai-web-security-skill.git .cursor/skills/ai-web-security
 ln -sfn ../skills/ai-web-security/.cursor/rules/ai-web-security.mdc .cursor/rules/ai-web-security.mdc
 ```
 
@@ -58,4 +57,4 @@ Konkretna wersja: `git -C .cursor/skills/ai-web-security checkout v1.0.0`.
 
 ## Licencja
 
-Do użytku wewnętrznego. Treści źródłowe OWASP na licencji CC BY-SA 4.0.
+CC BY-SA 4.0 (zgodnie z licencją materiałów źródłowych OWASP).

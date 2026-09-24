@@ -2,7 +2,7 @@
 # Instalacja skilla w projekcie (uruchom w katalogu głównym repozytorium projektu).
 # Użycie: bash install.sh [--clone]   (domyślnie git submodule)
 set -euo pipefail
-REPO_URL="${AI_SEC_SKILL_REPO:-git@github.com:jdanproject/ai-web-security-skill.git}"
+REPO_URL="${AI_SEC_SKILL_REPO:-https://github.com/jdanproject/ai-web-security-skill.git}"
 DEST=".cursor/skills/ai-web-security"
 MODE="${1:-submodule}"
 
