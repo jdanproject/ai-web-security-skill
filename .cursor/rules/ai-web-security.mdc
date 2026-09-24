@@ -1,0 +1,28 @@
+---
+description: Bezpieczeństwo funkcji AI w aplikacjach WWW (czat, asystent, RAG, agenci, MCP). Stosuj przy projektowaniu, implementacji i przeglądzie kodu integrującego modele językowe.
+globs:
+alwaysApply: false
+---
+
+# AI Web Security – reguła projektu
+
+Pełne wytyczne: `.cursor/skills/ai-web-security/SKILL.md` oraz katalog `references/` obok niego.
+
+## Sprawdzenie aktualizacji
+Przed pracą nad funkcją AI uruchom:
+```
+bash .cursor/skills/ai-web-security/scripts/check-update.sh
+```
+Skrypt sprawdza zdalne repozytorium najwyżej raz na 7 dni (`--force` wymusza). Jeśli pojawiła się nowa wersja, przeczytaj nowe wpisy w `CHANGELOG.md` i uwzględnij zmienione reguły.
+
+## Reguły skrócone (szczegóły w SKILL.md)
+- Model to niezaufany komponent; bezpieczeństwo egzekwuje kod, nie system prompt.
+- Wywołania modelu tylko z backendu; brak sekretów w kontekście modelu.
+- System prompt statyczny; treści niezaufane w oznaczonym bloku danych.
+- Autoryzacja w kodzie; `user_id`/`tenant_id` z sesji, nigdy z argumentów modelu.
+- Wąskie narzędzia ze ścisłym JSON Schema walidowanym na serwerze; brak shell/eval/dowolnego SQL/URL.
+- Akcje nieodwracalne wymagają potwierdzenia człowieka z surowymi parametrami.
+- Wynik modelu: sanityzacja HTML/Markdown, bez automatycznych obrazów, CSP; do SQL tylko parametryzacja.
+- RAG: filtr tenanta w zapytaniu + RLS; rozdzielone indeksy wg zaufania.
+- Limity: rate limit, tokeny, twardy limit kosztu, max kroków agenta, timeouty.
+- Przy code review używaj `references/review-checklist.md` i formatu raportu z SKILL.md.
