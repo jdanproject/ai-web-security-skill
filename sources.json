@@ -1,14 +1,14 @@
 {
   "last_checked": "2026-09-24",
   "github": {
-    "GenAI-Security-Project/GenAI-LLM-Top10": {"sha": "9253e38ade58", "date": "2026-08-26", "path": "2026/final", "role": "OWASP LLM Top 10 2026 (kanoniczne)"},
+    "GenAI-Security-Project/GenAI-LLM-Top10": {"sha": "9253e38ade58", "date": "2026-08-26", "path": "2026/final", "role": "OWASP LLM Top 10 2026 (canonical)"},
     "OWASP/CheatSheetSeries": {"sha": "394fe51fe08c", "date": "2026-09-22", "path": "cheatsheets/AI_Agent_Security_Cheat_Sheet.md, cheatsheets/MCP_Security_Cheat_Sheet.md, cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.md", "role": "OWASP Cheat Sheets"},
-    "OWASP/secure-agent-playbook": {"sha": "79fea6b9115b", "date": "2026-06-02", "role": "Playbook agentów"},
-    "modelcontextprotocol/modelcontextprotocol": {"sha": "ab3a39c13bd2", "date": "2026-09-24", "path": "docs/**/security_best_practices*, specification/**/authorization*", "role": "Specyfikacja i bezpieczeństwo MCP"},
-    "semgrep/skills": {"sha": "68177b8830f9", "date": "2026-07-28", "role": "Skill referencyjny llm-security"},
-    "trailofbits/skills": {"sha": "32e34f817379", "date": "2026-09-21", "role": "Skille audytowe"},
-    "UnitOneAI/SecuritySkills": {"sha": "70bc259bb01a", "date": "2026-06-18", "role": "Skille bezpieczeństwa (OWASP/NIST/MITRE)"},
-    "LLMSecurity/awesome-agent-skills-security": {"sha": "3c088461544c", "date": "2026-09-23", "role": "Przegląd nowych ataków i obron"}
+    "OWASP/secure-agent-playbook": {"sha": "79fea6b9115b", "date": "2026-06-02", "role": "Agent security playbook"},
+    "modelcontextprotocol/modelcontextprotocol": {"sha": "ab3a39c13bd2", "date": "2026-09-24", "path": "docs/**/security_best_practices*, specification/**/authorization*", "role": "MCP specification and security"},
+    "semgrep/skills": {"sha": "68177b8830f9", "date": "2026-07-28", "role": "Reference skill llm-security"},
+    "trailofbits/skills": {"sha": "32e34f817379", "date": "2026-09-21", "role": "Audit skills"},
+    "UnitOneAI/SecuritySkills": {"sha": "70bc259bb01a", "date": "2026-06-18", "role": "Security skills (OWASP/NIST/MITRE)"},
+    "LLMSecurity/awesome-agent-skills-security": {"sha": "3c088461544c", "date": "2026-09-23", "role": "Tracking new attacks and defenses"}
   },
   "web": [
     "https://genai.owasp.org/llm-top-10/",

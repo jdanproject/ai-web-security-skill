@@ -1,28 +1,28 @@
-# RAG, embeddingi i bazy wektorowe
+# RAG, Embeddings and Vector Stores
 
-## Ingest dokumentów
+## Document ingestion
 
-- Ekstrakcja tekstu w izolowanym procesie (PDF/DOCX/HTML to złożone parsery – ryzyko RCE/DoS); limity rozmiaru i czasu.
-- Normalizacja przed embeddingiem: usuń zero-width, tagi Unicode, homoglify, ukryty tekst (biały na białym, `display:none`, font 0, komentarze HTML, metadane).
-- Proweniencja każdego fragmentu: `source_id`, `source_url`, `ingested_at`, `trust_tier`, `pipeline_version`, `owner_tenant`, `acl`.
-- Treści od użytkowników (recenzje, zgłoszenia, uploady) → osobny indeks o niskim zaufaniu; przegląd przed trafieniem do indeksu wiedzy.
-- Treści z internetu → nigdy w jednym indeksie z dokumentami wewnętrznymi bez twardej izolacji.
+- Extract text in an isolated process (PDF/DOCX/HTML parsers are complex – RCE/DoS risk); size and time limits.
+- Normalize before embedding: strip zero-width chars, Unicode tags, homoglyphs, hidden text (white-on-white, `display:none`, zero font size, HTML comments, metadata).
+- Provenance for every chunk: `source_id`, `source_url`, `ingested_at`, `trust_tier`, `pipeline_version`, `owner_tenant`, `acl`.
+- User-generated content (reviews, tickets, uploads) → separate low-trust index; review before it reaches the knowledge index.
+- Web content → never in the same index as internal documents without hard isolation.
 
-## Kontrola dostępu
+## Access control
 
-- **Filtr uprawnień wewnątrz zapytania**, po stronie serwera, na podstawie sesji:
+- **Permission filter inside the query**, server-side, derived from the session:
 
 ```sql
 -- PostgreSQL + pgvector
 SELECT id, content, source_url
 FROM kb_chunks
-WHERE tenant_id = $1               -- z sesji, nie z żądania klienta
-  AND acl && $2::text[]            -- role użytkownika z sesji
+WHERE tenant_id = $1               -- from session, not from client request
+  AND acl && $2::text[]            -- user roles from session
 ORDER BY embedding <=> $3
 LIMIT 8;
 ```
 
-- Włącz Row Level Security w PostgreSQL dla tabel z fragmentami jako drugą linię obrony:
+- Enable PostgreSQL Row Level Security on chunk tables as a second line of defense:
 
 ```sql
 ALTER TABLE kb_chunks ENABLE ROW LEVEL SECURITY;
@@ -30,24 +30,24 @@ CREATE POLICY tenant_isolation ON kb_chunks
   USING (tenant_id = current_setting('app.tenant_id')::bigint);
 ```
 
-- ACL na poziomie fragmentu – dokument publiczny może zawierać poufny akapit.
-- Endpointy embeddingu i wyszukiwania są API: uwierzytelnienie, limity per tenant.
-- Nie zwracaj klientowi surowych wyników podobieństwa ani wektorów (ryzyko inwersji embeddingów).
+- Chunk-level ACLs – a public document can contain a confidential paragraph.
+- Embedding and search endpoints are APIs: authentication, per-tenant limits.
+- Never return raw similarity scores or vectors to clients (embedding inversion risk).
 
-## Przy odpowiedzi
+## At answer time
 
-- Fragmenty przekazywane do modelu w bloku `untrusted_data` z oznaczeniem źródła.
-- Pokazuj użytkownikowi źródła (cytaty) – ułatwia weryfikację i wykrywanie zatrucia.
-- Ogranicz liczbę i łączną długość fragmentów.
+- Pass chunks to the model in an `untrusted_data` block with source attribution.
+- Show sources (citations) to the user – helps verification and poisoning detection.
+- Cap the number and total length of chunks.
 
-## Wykrywanie zatrucia
+## Poisoning detection
 
-- Alarmuj, gdy nowy wektor jest bardzo bliski wielu typowym zapytaniom (retrieval hijacking).
-- Monitoruj fragmenty zawierające frazy imperatywne skierowane do AI („ignore previous”, „as an AI assistant you must”, „system:”), także w innych językach i base64.
-- Możliwość unieważnienia całej partii po `pipeline_version`/`source_id`.
+- Alert when a new vector is very close to many common queries (retrieval hijacking).
+- Monitor chunks with imperative phrases aimed at AI ("ignore previous", "as an AI assistant you must", "system:"), including other languages and base64.
+- Ability to invalidate an entire batch by `pipeline_version`/`source_id`.
 
-## Cykl życia
+## Lifecycle
 
-- Usunięcie dokumentu źródłowego → usunięcie embeddingów w określonym czasie; okresowa rekonsyliacja.
-- Embeddingi danych osobowych podlegają RODO (prawo do usunięcia).
-- Kopie zapasowe indeksu z tą samą klasyfikacją co dane źródłowe.
+- Source document deleted → embeddings deleted within a bounded time; periodic reconciliation.
+- Embeddings of personal data are subject to GDPR (right to erasure).
+- Index backups carry the same classification as the source data.

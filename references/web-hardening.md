@@ -1,11 +1,11 @@
-# Utwardzanie warstwy WWW wokół funkcji AI
+# Web Layer Hardening Around AI Features
 
-Funkcje AI dziedziczą wszystkie klasyczne ryzyka aplikacji WWW (OWASP Top 10, ASVS 5.0). Poniżej minimum dla endpointów czatu/asystenta.
+AI features inherit all classic web application risks (OWASP Top 10, ASVS 5.0). Below is the minimum for chatbot/assistant endpoints.
 
-## Nagłówki HTTP
+## HTTP headers
 
 ```
-Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{RANDOM}'; style-src 'self'; img-src 'self' data: https://cdn.twojadomena.pl; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{RANDOM}'; style-src 'self'; img-src 'self' data: https://cdn.example.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
@@ -13,7 +13,7 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 Cross-Origin-Opener-Policy: same-origin
 ```
 
-`img-src` i `connect-src` ograniczone do allowlisty – blokuje eksfiltrację przez obrazy/fetch w odpowiedziach modelu nawet przy błędzie sanityzacji.
+Allowlisted `img-src` and `connect-src` block exfiltration via images/fetch in model output even if sanitization fails.
 
 Apache:
 ```apache
@@ -23,41 +23,41 @@ Header always set Referrer-Policy "strict-origin-when-cross-origin"
 Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains"
 ```
 
-## Sesje i uwierzytelnienie
+## Sessions and authentication
 
-- Ciasteczka: `Secure; HttpOnly; SameSite=Lax` (lub `Strict`), rotacja ID po logowaniu.
-- Endpointy czatu wymagające logowania sprawdzają sesję przy każdym żądaniu, także w WebSocket/SSE.
-- Token CSRF dla żądań zmieniających stan (POST czatu wywołującego akcje).
+- Cookies: `Secure; HttpOnly; SameSite=Lax` (or `Strict`), rotate session ID on login.
+- Authenticated chat endpoints check the session on every request, including WebSocket/SSE.
+- CSRF token for state-changing requests (chat POSTs that trigger actions).
 
 ## CORS
 
-- Endpoint czatu bez `Access-Control-Allow-Origin: *`. Allowlista konkretnych originów; `Allow-Credentials` tylko z konkretnym originem.
-- Widget czatu osadzany na innych domenach: osobny endpoint z tokenem widgetu, bez dostępu do danych zalogowanego użytkownika panelu.
+- No `Access-Control-Allow-Origin: *` on chat endpoints. Allowlist specific origins; `Allow-Credentials` only with a specific origin.
+- Chat widget embedded on other domains: separate endpoint with a widget token, no access to logged-in admin user data.
 
-## Rate limiting i ochrona antybotowa
+## Rate limiting and bot protection
 
-- Na poziomie serwera WWW / reverse proxy (mod_evasive, mod_security, nginx `limit_req`, Cloudflare) **oraz** w aplikacji (per użytkownik, per tokeny).
-- CAPTCHA/Turnstile dla anonimowego czatu po przekroczeniu progu.
-- fail2ban na wzorce nadużyć w logach aplikacji.
+- At web server / reverse proxy level (mod_evasive, mod_security, nginx `limit_req`, Cloudflare) **and** in the application (per user, per tokens).
+- CAPTCHA/Turnstile for anonymous chat after a threshold.
+- fail2ban on abuse patterns in application logs.
 
-## Upload plików do AI
+## File uploads to AI
 
-- Allowlista typów (weryfikacja magic bytes, nie rozszerzenia), limit rozmiaru, skan AV.
-- Przechowywanie poza webrootem, losowe nazwy, serwowanie z `Content-Disposition: attachment`.
-- Parsowanie w izolowanym procesie z limitami.
+- Type allowlist (verify magic bytes, not extension), size limit, AV scan.
+- Store outside webroot, random names, serve with `Content-Disposition: attachment`.
+- Parse in an isolated process with limits.
 
-## Sekrety
+## Secrets
 
-- Klucze API dostawców w zmiennych środowiskowych / menedżerze sekretów, uprawnienia plików `600`, nigdy w repozytorium (`.gitignore`, gitleaks w CI).
-- Osobne klucze per środowisko (dev/stage/prod) i per funkcja; limity wydatków ustawione u dostawcy.
-- Rotacja kluczy i procedura na wypadek wycieku.
+- Provider API keys in environment variables / secrets manager, file mode `600`, never in the repository (`.gitignore`, gitleaks in CI).
+- Separate keys per environment (dev/stage/prod) and per feature; spend limits set at the provider.
+- Key rotation and a leak response procedure.
 
-## Błędy i logi
+## Errors and logs
 
-- Komunikaty błędów bez stack trace, promptów, nazw modeli, fragmentów kontekstu.
-- Logi bez pełnych kluczy, haseł, tokenów sesji; usuwanie znaków sterujących.
+- Error messages without stack traces, prompts, model names or context fragments.
+- Logs without full keys, passwords, session tokens; strip control characters.
 
-## Zależności
+## Dependencies
 
-- `npm audit` / `cpan-audit` / Dependabot / Renovate; przypięte wersje (lockfile, `cpanfile.snapshot`).
-- SDK dostawców AI aktualizowane świadomie (przegląd changelogów).
+- `npm audit` / `cpan-audit` / Dependabot / Renovate; pinned versions (lockfile, `cpanfile.snapshot`).
+- Upgrade AI provider SDKs deliberately (review changelogs).

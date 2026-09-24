@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Sprawdza i pobiera aktualizacje skilla (fast-forward). Domyślnie najwyżej raz na 7 dni.
-# Użycie: bash check-update.sh [--force]
+# Checks for and pulls skill updates (fast-forward). By default at most once every 7 days.
+# Usage: bash check-update.sh [--force]
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$DIR/.git-last-check"
@@ -11,7 +11,7 @@ now=$(date +%s)
 if [ "${1:-}" != "--force" ] && [ -f "$STAMP" ]; then
   last=$(cat "$STAMP" 2>/dev/null || echo 0)
   if [ $((now-last)) -lt $INTERVAL ]; then
-    echo "ai-web-security $(cat "$DIR/VERSION") – sprawdzano niedawno, pomijam (użyj --force)."
+    echo "ai-web-security $(cat "$DIR/VERSION") – checked recently, skipping (use --force)."
     exit 0
   fi
 fi
@@ -22,13 +22,13 @@ behind=$(git -C "$DIR" rev-list --count HEAD..origin/main)
 echo "$now" > "$STAMP"
 
 if [ "$behind" -eq 0 ]; then
-  echo "ai-web-security $old – aktualna."
+  echo "ai-web-security $old – up to date."
   exit 0
 fi
 
 git -C "$DIR" pull --quiet --ff-only origin main
 new=$(cat "$DIR/VERSION")
-echo "ai-web-security zaktualizowana: $old -> $new ($behind commit(ów))."
-echo "--- Nowe wpisy w CHANGELOG.md ---"
+echo "ai-web-security updated: $old -> $new ($behind commit(s))."
+echo "--- New CHANGELOG.md entries ---"
 awk -v old="$old" '/^## \[/{ if (index($0,"["old"]")) exit } f||/^## \[/{f=1; print}' "$DIR/CHANGELOG.md"
-echo "Uwaga: jeśli skill jest submodułem, zatwierdź nowy wskaźnik: git add .cursor/skills/ai-web-security && git commit -m 'Update ai-web-security skill'"
+echo "Note: if the skill is a submodule, commit the new pointer: git add .cursor/skills/ai-web-security && git commit -m 'Update ai-web-security skill'"

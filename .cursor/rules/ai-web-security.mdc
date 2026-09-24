@@ -1,28 +1,28 @@
 ---
-description: Bezpieczeństwo funkcji AI w aplikacjach WWW (czat, asystent, RAG, agenci, MCP). Stosuj przy projektowaniu, implementacji i przeglądzie kodu integrującego modele językowe.
+description: Security of AI features in web applications (chatbot, assistant, RAG, agents, MCP). Apply when designing, implementing or reviewing code that integrates language models.
 globs:
 alwaysApply: false
 ---
 
-# AI Web Security – reguła projektu
+# AI Web Security – project rule
 
-Pełne wytyczne: `.cursor/skills/ai-web-security/SKILL.md` oraz katalog `references/` obok niego.
+Full guidelines: `.cursor/skills/ai-web-security/SKILL.md` and the `references/` directory next to it.
 
-## Sprawdzenie aktualizacji
-Przed pracą nad funkcją AI uruchom:
+## Update check
+Before working on an AI feature run:
 ```
 bash .cursor/skills/ai-web-security/scripts/check-update.sh
 ```
-Skrypt sprawdza zdalne repozytorium najwyżej raz na 7 dni (`--force` wymusza). Jeśli pojawiła się nowa wersja, przeczytaj nowe wpisy w `CHANGELOG.md` i uwzględnij zmienione reguły.
+The script checks the remote repository at most once every 7 days (`--force` overrides). If a new version was pulled, read the new `CHANGELOG.md` entries and apply the changed rules.
 
-## Reguły skrócone (szczegóły w SKILL.md)
-- Model to niezaufany komponent; bezpieczeństwo egzekwuje kod, nie system prompt.
-- Wywołania modelu tylko z backendu; brak sekretów w kontekście modelu.
-- System prompt statyczny; treści niezaufane w oznaczonym bloku danych.
-- Autoryzacja w kodzie; `user_id`/`tenant_id` z sesji, nigdy z argumentów modelu.
-- Wąskie narzędzia ze ścisłym JSON Schema walidowanym na serwerze; brak shell/eval/dowolnego SQL/URL.
-- Akcje nieodwracalne wymagają potwierdzenia człowieka z surowymi parametrami.
-- Wynik modelu: sanityzacja HTML/Markdown, bez automatycznych obrazów, CSP; do SQL tylko parametryzacja.
-- RAG: filtr tenanta w zapytaniu + RLS; rozdzielone indeksy wg zaufania.
-- Limity: rate limit, tokeny, twardy limit kosztu, max kroków agenta, timeouty.
-- Przy code review używaj `references/review-checklist.md` i formatu raportu z SKILL.md.
+## Condensed rules (details in SKILL.md)
+- The model is an untrusted component; security is enforced by code, not by the system prompt.
+- Model calls only from the backend; no secrets in model context.
+- Static system prompt; untrusted content in a delimited data block.
+- Authorization in code; `user_id`/`tenant_id` from session, never from model arguments.
+- Narrow tools with strict JSON Schema validated server-side; no shell/eval/arbitrary SQL/URL.
+- Irreversible actions require human confirmation showing raw parameters.
+- Model output: sanitized HTML/Markdown, no auto-loaded images, CSP; SQL only parameterized.
+- RAG: tenant filter in the query + RLS; indexes separated by trust level.
+- Limits: rate limit, tokens, hard spend cap, max agent steps, timeouts.
+- For code review use `references/review-checklist.md` and the report format from SKILL.md.

@@ -1,77 +1,77 @@
-# Agenci, narzędzia i MCP
+# Agents, Tools and MCP
 
 ## OWASP Top 10 for Agentic Applications 2026
 
-| ID | Ryzyko | Kluczowa kontrola |
+| ID | Risk | Key control |
 |---|---|---|
-| ASI01 | Agent Goal Hijack – przejęcie celu przez wstrzyknięte instrukcje lub zatrute treści | Oddzielenie danych od instrukcji, weryfikacja planu przed akcjami wrażliwymi |
-| ASI02 | Tool Misuse and Exploitation – nadużycie legalnych narzędzi | Wąskie narzędzia, schematy, polityki per wywołanie |
-| ASI03 | Identity and Privilege Abuse | Działanie w kontekście użytkownika, krótkotrwałe poświadczenia, brak kont „super-agenta” |
-| ASI04 | Agentic Supply Chain Vulnerabilities | Weryfikacja serwerów MCP, skilli, pluginów, przypięte wersje |
-| ASI05 | Unexpected Code Execution (RCE) | Brak `eval`/shell; jeśli kod konieczny – izolowany sandbox bez sieci |
-| ASI06 | Memory and Context Poisoning | Walidacja zapisów do pamięci, izolacja per użytkownik, możliwość czyszczenia |
-| ASI07 | Insecure Inter-Agent Communication | Uwierzytelnione kanały, wiadomości od innych agentów = niezaufane dane |
-| ASI08 | Cascading Failures | Limity kroków, wyłączniki, izolacja błędów |
-| ASI09 | Human-Agent Trust Exploitation | Potwierdzenia pokazujące surowe operacje, bez perswazyjnych streszczeń |
-| ASI10 | Rogue Agents | Monitoring zachowania, kill switch, audyt |
+| ASI01 | Agent Goal Hijack – goals redirected by injected instructions or poisoned content | Separate data from instructions, verify plan before sensitive actions |
+| ASI02 | Tool Misuse and Exploitation – abuse of legitimate tools | Narrow tools, schemas, per-call policies |
+| ASI03 | Identity and Privilege Abuse | Act in user context, short-lived credentials, no "super-agent" accounts |
+| ASI04 | Agentic Supply Chain Vulnerabilities | Vet MCP servers, skills, plugins; pin versions |
+| ASI05 | Unexpected Code Execution (RCE) | No `eval`/shell; if code is required – isolated sandbox without network |
+| ASI06 | Memory and Context Poisoning | Validate memory writes, per-user isolation, ability to purge |
+| ASI07 | Insecure Inter-Agent Communication | Authenticated channels; messages from other agents = untrusted data |
+| ASI08 | Cascading Failures | Step limits, circuit breakers, fault isolation |
+| ASI09 | Human-Agent Trust Exploitation | Confirmations showing raw operations, no persuasive summaries |
+| ASI10 | Rogue Agents | Behavior monitoring, kill switch, audit |
 
-## Projektowanie narzędzi (function calling)
+## Tool design (function calling)
 
-1. **Inwentarz**: lista wszystkich narzędzi, ich uprawnień i poświadczeń, właściciel.
-2. **Minimalizm**: tylko narzędzia potrzebne do zadania. Czat informacyjny nie potrzebuje narzędzi zapisujących.
-3. **Wąskie operacje**: `get_order_status(order_id)` zamiast `run_sql(query)`; `send_reset_link()` zamiast `send_email(to, body)`.
-4. **Ścisły schemat**: JSON Schema z `additionalProperties: false`, typy, zakresy, wzorce, enumy. Walidacja **po stronie serwera** (ajv / JSON::Validator) – model może zignorować schemat.
-5. **Kontekst użytkownika**: wykonawca narzędzia dokleja `user_id`/`tenant_id` z sesji. Parametry identyfikujące właściciela nigdy nie pochodzą od modelu.
-6. **Polityka przed wykonaniem**: deterministyczny silnik reguł sprawdza (kto, co, na czym, ile razy) w momencie wykonania.
-7. **Poziomy ryzyka**:
-   - odczyt własnych danych → automatycznie,
-   - zapis odwracalny → automatycznie z logiem i limitem,
-   - nieodwracalne/finansowe/komunikacja zewnętrzna → potwierdzenie człowieka z podglądem surowych parametrów.
-8. **Wyniki narzędzi** wracają do modelu jako niezaufane dane (mogą zawierać injection, np. treść e-maila, strony www).
-9. **Limity**: max liczba wywołań na turę i sesję, wykrywanie pętli (te same wywołania powtarzane), timeouty.
+1. **Inventory**: every tool, its permissions and credentials, owner.
+2. **Minimalism**: only tools required for the task. An informational chatbot needs no write tools.
+3. **Narrow operations**: `get_order_status(order_id)` instead of `run_sql(query)`; `send_reset_link()` instead of `send_email(to, body)`.
+4. **Strict schema**: JSON Schema with `additionalProperties: false`, types, ranges, patterns, enums. Validate **server-side** (ajv / JSON::Validator) – the model may ignore the schema.
+5. **User context**: the tool executor injects `user_id`/`tenant_id` from the session. Ownership parameters never come from the model.
+6. **Pre-execution policy**: a deterministic rules engine checks (who, what, on which resource, how often) at execution time.
+7. **Risk tiers**:
+   - reading own data → automatic,
+   - reversible write → automatic with log and limit,
+   - irreversible / financial / external communication → human confirmation with raw parameter preview.
+8. **Tool results** return to the model as untrusted data (they may contain injection, e.g. email body, web page).
+9. **Limits**: max calls per turn and per session, loop detection (repeated identical calls), timeouts.
 
-## Łańcuch „lethal trifecta”
+## The "lethal trifecta"
 
-Najgroźniejsza kombinacja w jednym agencie:
-1. dostęp do danych prywatnych,
-2. ekspozycja na niezaufane treści,
-3. możliwość komunikacji na zewnątrz (HTTP, e-mail, obrazy w odpowiedzi).
+The most dangerous combination in a single agent:
+1. access to private data,
+2. exposure to untrusted content,
+3. ability to communicate externally (HTTP, email, images in output).
 
-Jeśli agent ma wszystkie trzy – **usuń co najmniej jedną nogę** (np. brak wyjścia sieciowego, brak renderowania obrazów, rozdzielenie na dwa agenty z różnymi uprawnieniami) albo wymagaj potwierdzenia każdej komunikacji zewnętrznej.
+If an agent has all three – **remove at least one leg** (e.g. no network egress, no image rendering, split into two agents with different permissions) or require confirmation for every external communication.
 
-## Wzorce architektoniczne
+## Architectural patterns
 
-- **Dual LLM / quarantined LLM**: model uprzywilejowany (z narzędziami) nigdy nie widzi surowych treści niezaufanych; model kwarantannowy przetwarza treści i zwraca wynik o ścisłej strukturze (np. enum, liczby), bez wolnego tekstu.
-- **Plan-then-execute**: plan akcji ustalany przed kontaktem z niezaufanymi danymi; dane nie mogą dodać nowych akcji.
-- **Egress allowlist**: sandbox narzędzi z wyjściem sieciowym tylko do określonych domen (proxy filtrujące).
+- **Dual LLM / quarantined LLM**: the privileged model (with tools) never sees raw untrusted content; the quarantined model processes content and returns strictly structured output (enums, numbers), no free text.
+- **Plan-then-execute**: the action plan is fixed before touching untrusted data; data cannot add new actions.
+- **Egress allowlist**: tool sandbox with network egress only to specific domains (filtering proxy).
 
 ## MCP (Model Context Protocol)
 
-### Serwer MCP (jeśli go tworzysz)
-- Transport HTTP: uwierzytelnianie OAuth 2.1 zgodnie ze specyfikacją MCP Authorization; serwer jako resource server, weryfikacja `aud` tokenu – **odrzucaj tokeny wystawione dla innych zasobów** (zakaz token passthrough).
-- Wąskie zakresy (scopes), osobne poświadczenia per serwer, krótkie TTL.
-- Walidacja wejścia każdego narzędzia jak w publicznym API.
-- Opisy narzędzi statyczne i przejrzane – opis jest częścią promptu modelu.
-- Transport lokalny (stdio): uruchamiaj z minimalnymi uprawnieniami systemowymi; zakaz nasłuchu na `0.0.0.0` bez uwierzytelnienia; ochrona przed DNS rebinding (walidacja `Origin`/`Host`).
-- Sesje: identyfikatory losowe, niepowiązane z autoryzacją; autoryzacja weryfikowana przy każdym żądaniu.
+### MCP server (if you build one)
+- HTTP transport: OAuth 2.1 per the MCP Authorization spec; the server is a resource server and validates the token `aud` – **reject tokens issued for other resources** (no token passthrough).
+- Narrow scopes, separate credentials per server, short TTLs.
+- Validate every tool's input as you would a public API.
+- Tool descriptions are static and reviewed – descriptions are part of the model prompt.
+- Local transport (stdio): run with minimal OS privileges; never listen on `0.0.0.0` without authentication; protect against DNS rebinding (validate `Origin`/`Host`).
+- Sessions: random IDs not tied to authorization; verify authorization on every request.
 
-### Klient / host MCP (jeśli podłączasz cudze serwery)
-- Tylko serwery z zaufanych źródeł, przypięte wersje, przegląd kodu i opisów narzędzi.
-- Ochrona przed **tool poisoning** (ukryte instrukcje w opisach narzędzi) i **rug pull** (zmiana opisów po zatwierdzeniu) – porównuj hash opisów, alarmuj przy zmianie.
-- Ochrona przed **tool shadowing** – unikalne przestrzenie nazw narzędzi per serwer.
-- Potwierdzenie użytkownika dla narzędzi zapisujących; pokazywanie pełnych argumentów.
-- Izolacja: każdy serwer w osobnym kontenerze/użytkowniku, egress przez proxy filtrujące.
-- Confused deputy przy proxy OAuth: zgoda użytkownika per klient, walidacja `redirect_uri`.
+### MCP client / host (if you connect third-party servers)
+- Only servers from trusted sources, pinned versions, reviewed code and tool descriptions.
+- Protect against **tool poisoning** (hidden instructions in tool descriptions) and **rug pulls** (descriptions changed after approval) – hash descriptions, alert on change.
+- Protect against **tool shadowing** – unique tool namespaces per server.
+- User confirmation for write tools; show full arguments.
+- Isolation: each server in its own container/user, egress through a filtering proxy.
+- Confused deputy with OAuth proxies: per-client user consent, validate `redirect_uri`.
 
-## Pamięć agenta
+## Agent memory
 
-- Zapisy do pamięci tylko z zaufanych ścieżek lub po walidacji; oznacz źródło każdego wpisu.
-- Izolacja per użytkownik/tenant; brak współdzielonej pamięci między klientami.
-- Użytkownik widzi i może usunąć swoją pamięć.
-- TTL dla wpisów, okresowy przegląd anomalii.
+- Memory writes only from trusted paths or after validation; tag the source of every entry.
+- Per-user/tenant isolation; no shared memory across customers.
+- Users can view and delete their memory.
+- TTL on entries, periodic anomaly review.
 
-## Wiele agentów
+## Multi-agent systems
 
-- Wiadomości między agentami uwierzytelnione (podpis/mTLS) i traktowane jak niezaufane dane.
-- Agent nie dziedziczy uprawnień agenta wywołującego automatycznie.
-- Limity rekurencji i głębokości delegacji.
+- Inter-agent messages are authenticated (signature/mTLS) and treated as untrusted data.
+- An agent does not automatically inherit the calling agent's permissions.
+- Limits on recursion and delegation depth.

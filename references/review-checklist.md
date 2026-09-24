@@ -1,69 +1,69 @@
-# Checklista przeglądu funkcji AI
+# AI Feature Review Checklist
 
-Oznaczenia: [ ] do sprawdzenia · [x] spełnione · [–] nie dotyczy · [!] luka
+Legend: [ ] to check · [x] pass · [–] n/a · [!] gap
 
-## Architektura
-- [ ] Wywołania modelu wyłącznie z backendu; klucz API tylko na serwerze
-- [ ] Opisane granice zaufania i źródła danych trafiających do modelu
-- [ ] Inwentarz narzędzi, serwerów MCP, poświadczeń i dostawców (AIBOM)
-- [ ] Agent nie łączy jednocześnie: danych prywatnych + niezaufanych treści + komunikacji zewnętrznej (lub jest potwierdzenie)
+## Architecture
+- [ ] Model calls only from the backend; API key only on the server
+- [ ] Trust boundaries and model input sources documented
+- [ ] Inventory of tools, MCP servers, credentials and providers (AIBOM)
+- [ ] No agent combines private data + untrusted content + external communication (or confirmation is required)
 
-## Wejście i kontekst (LLM01, LLM08)
-- [ ] System prompt statyczny, bez interpolacji danych użytkownika/RAG
-- [ ] Brak sekretów, poświadczeń i reguł autoryzacji w kontekście
-- [ ] Treści niezaufane w oznaczonym bloku danych
-- [ ] Normalizacja Unicode i znaków sterujących, limit długości
-- [ ] Historia rozmowy po stronie serwera, klient nie może jej modyfikować
+## Input and context (LLM01, LLM08)
+- [ ] Static system prompt, no interpolation of user/RAG data
+- [ ] No secrets, credentials or authorization rules in context
+- [ ] Untrusted content in a delimited data block
+- [ ] Unicode and control-character normalization, length limit
+- [ ] Conversation history server-side; client cannot modify it
 
-## Autoryzacja i narzędzia (LLM03, ASI02, ASI03, ASI05)
-- [ ] Autoryzacja w kodzie, w kontekście zalogowanego użytkownika
-- [ ] `user_id`/`tenant_id` z sesji, nie z argumentów modelu
-- [ ] Brak narzędzi otwartych (shell, dowolne SQL/URL/plik, eval)
-- [ ] JSON Schema z `additionalProperties: false`, walidacja po stronie serwera
-- [ ] Minimalne uprawnienia DB/API dla narzędzi
-- [ ] Potwierdzenie człowieka dla akcji nieodwracalnych, z surowymi parametrami
-- [ ] Limity kroków i wywołań narzędzi, wykrywanie pętli
+## Authorization and tools (LLM03, ASI02, ASI03, ASI05)
+- [ ] Authorization in code, in the authenticated user's context
+- [ ] `user_id`/`tenant_id` from session, not from model arguments
+- [ ] No open-ended tools (shell, arbitrary SQL/URL/file, eval)
+- [ ] JSON Schema with `additionalProperties: false`, validated server-side
+- [ ] Least-privilege DB/API permissions for tools
+- [ ] Human confirmation for irreversible actions, showing raw parameters
+- [ ] Limits on steps and tool calls, loop detection
 
-## Wyjście (LLM10)
-- [ ] Brak `innerHTML`/`<%==`/`v-html`/`dangerouslySetInnerHTML` z surowym wynikiem
-- [ ] Markdown przez sanityzer z allowlistą; linki tylko `https:`/`mailto:`
-- [ ] Obrazy z odpowiedzi nie ładowane automatycznie (lub allowlista/proxy)
-- [ ] Sanityzacja na złożonym strumieniu, nie per fragment
-- [ ] Wynik modelu nigdy do shell/eval; do SQL tylko parametryzowany
-- [ ] CSP z ograniczonym `img-src` i `connect-src`
+## Output (LLM10)
+- [ ] No `innerHTML`/`<%==`/`v-html`/`dangerouslySetInnerHTML` with raw output
+- [ ] Markdown through an allowlist sanitizer; links only `https:`/`mailto:`
+- [ ] Images from output not auto-loaded (or allowlist/proxy)
+- [ ] Sanitization on the assembled stream, not per chunk
+- [ ] Model output never to shell/eval; to SQL only parameterized
+- [ ] CSP with restricted `img-src` and `connect-src`
 
-## Dane (LLM02, LLM09)
-- [ ] Autoryzacja przed pobraniem (narzędzia, RAG)
-- [ ] Filtr tenanta wewnątrz zapytania wektorowego + RLS
-- [ ] Rozdzielone indeksy wg poziomu zaufania
-- [ ] Minimalizacja/maskowanie PII wysyłanego do dostawcy
-- [ ] Ustawienia dostawcy: brak trenowania na danych, retencja, DPA, region
-- [ ] Usuwanie embeddingów przy usunięciu źródła
+## Data (LLM02, LLM09)
+- [ ] Authorize before retrieval (tools, RAG)
+- [ ] Tenant filter inside the vector query + RLS
+- [ ] Indexes separated by trust level
+- [ ] Minimization/masking of PII sent to the provider
+- [ ] Provider settings: no training on data, retention, DPA, region
+- [ ] Embeddings deleted when source is deleted
 
-## Koszty i dostępność (LLM06)
-- [ ] Rate limit per użytkownik/IP; limity tokenów
-- [ ] Twardy limit kosztów (aplikacja + panel dostawcy)
-- [ ] `max_tokens`, timeouty, przerwanie żądania przy rozłączeniu klienta
-- [ ] Ochrona antybotowa dla czatu publicznego
+## Cost and availability (LLM06)
+- [ ] Rate limit per user/IP; token limits
+- [ ] Hard spend cap (application + provider dashboard)
+- [ ] `max_tokens`, timeouts, upstream abort on client disconnect
+- [ ] Bot protection for public chatbot
 
-## Łańcuch dostaw (LLM04, LLM05, ASI04)
-- [ ] Przypięte wersje SDK/modeli/serwerów MCP; przegląd przed aktualizacją
-- [ ] Hash opisów narzędzi MCP, alarm przy zmianie
-- [ ] Bezpieczne formaty modeli (bez pickle)
+## Supply chain (LLM04, LLM05, ASI04)
+- [ ] Pinned SDK/model/MCP server versions; review before upgrades
+- [ ] Hashes of MCP tool descriptions, alert on change
+- [ ] Safe model formats (no pickle)
 
-## Dezinformacja i UX (LLM07, ASI09)
-- [ ] Fakty biznesowe (ceny, statusy, zasady) z systemu, nie z modelu
-- [ ] Oznaczenie, że użytkownik rozmawia z AI
-- [ ] Źródła/cytaty przy odpowiedziach RAG
+## Misinformation and UX (LLM07, ASI09)
+- [ ] Business facts (prices, statuses, policies) from the system, not the model
+- [ ] Notice that the user is talking to AI
+- [ ] Sources/citations for RAG answers
 
-## WWW
-- [ ] Sesje: `Secure; HttpOnly; SameSite`; CSRF dla żądań zmieniających stan
-- [ ] CORS z allowlistą; WebSocket z weryfikacją `Origin`
-- [ ] Błędy bez stack trace i kontekstu modelu
-- [ ] Sekrety poza repozytorium; skan gitleaks
+## Web
+- [ ] Sessions: `Secure; HttpOnly; SameSite`; CSRF for state-changing requests
+- [ ] CORS allowlist; WebSocket `Origin` check
+- [ ] Errors without stack traces or model context
+- [ ] Secrets outside the repository; gitleaks scan
 
-## Obserwowalność i reakcja
-- [ ] Audyt wywołań narzędzi i decyzji polityk
-- [ ] Alerty kosztów i prób injection
-- [ ] Wyłącznik funkcji AI i procedura incydentu
-- [ ] Testy regresyjne bezpieczeństwa (`testing-redteam.md`) w CI
+## Observability and response
+- [ ] Audit of tool calls and policy decisions
+- [ ] Cost and injection-attempt alerts
+- [ ] AI feature kill switch and incident procedure
+- [ ] Security regression tests (`testing-redteam.md`) in CI

